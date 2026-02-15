@@ -25,10 +25,17 @@ func Study(err error, requestUri string) *model.ProblemDetail {
 			} else {
 				item = parts[0]
 			}
+			val := validators[fe.Tag()]
+			var message string
+			if val != nil {
+				message = val.Message
+			} else {
+				message = getErrorMsg(fe)
+			}
 			detail.Errors[i] = &model.FieldError{
 				Item:          utils.FirstToLower(item),
 				Field:         utils.FirstToLower(fe.Field()),
-				Message:       getErrorMsg(fe),
+				Message:       message,
 				RejectedValue: fe.Value(),
 			}
 		}
@@ -48,14 +55,6 @@ func getErrorMsg(ve validator.FieldError) string {
 		case "RequestUUID":
 			return "не задан UUID запроса"
 		}
-	case "systemId":
-		return "не задан или недопустимое значение идентификатора системы-инициатора"
-	case "data":
-		return "не заданы операции"
-	case "operation":
-		return "не задан или неподдерживаемый тип операции"
-	case "study":
-		return "не задан или неподдерживаемый тип учебной сущности"
 	}
 	return "неизвестная ошибка"
 
