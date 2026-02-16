@@ -8,15 +8,10 @@ import (
 	"strings"
 )
 
-func Study(err error, requestUri string) *model.ProblemDetail {
+func Study(err error) []*model.FieldError {
 	var ve validator.ValidationErrors
 	if errors.As(err, &ve) {
-		detail := model.ProblemDetail{
-			Type:     "https://wiki.x5.ru/pages/viewpage.action?pageId=1302077850",
-			Instance: requestUri,
-			Title:    "Входные параметры не соответствуют требованиям",
-			Errors:   make([]*model.FieldError, len(ve)),
-		}
+		errs := make([]*model.FieldError, len(ve))
 		for i, fe := range ve {
 			parts := strings.Split(fe.Namespace(), ".")
 			var item string
@@ -30,43 +25,16 @@ func Study(err error, requestUri string) *model.ProblemDetail {
 			if val != nil {
 				message = val.Message
 			} else {
-				message = getErrorMsg(fe)
+				message = "неизвестная ошибка"
 			}
-			detail.Errors[i] = &model.FieldError{
+			errs[i] = &model.FieldError{
 				Item:          utils.FirstToLower(item),
 				Field:         utils.FirstToLower(fe.Field()),
 				Message:       message,
 				RejectedValue: fe.Value(),
 			}
 		}
-		return &detail
+		return errs
 	}
 	return nil
-}
-
-func getErrorMsg(ve validator.FieldError) string {
-	switch ve.Tag() {
-	case "required":
-		switch ve.Field() {
-		case "Tn":
-			return "не задан ТН сотрудника"
-		case "StudyId":
-			return "не задан идентификатор учебной сущности"
-		case "RequestUUID":
-			return "не задан UUID запроса"
-		}
-	}
-	return "неизвестная ошибка"
-
-	//RequestOperationRaw::tn.name,
-	//String?::isLessThanOne to "ТН сотрудника меньше 1",
-
-	//	RequestOperationRaw::studyId.name,
-	//	String?::isLessThanOne to "идентификатор учебной сущности меньше 1",
-	//	String?::isNotDate to "формат даты не соответствует паттерну $DATE_PATTERN"
-	//if (target.operationType?.toIntOrNull() == 2) {
-	//	dateChecks.add(0, String?::isNullOrBlank to "не задана дата назначения обучения")
-	//}
-	//	RequestOperationRaw::date.name,
-	//	*dateChecks.toTypedArray()
 }

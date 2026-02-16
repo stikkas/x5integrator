@@ -5,16 +5,20 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/stikkas/integrator/internal/handler/model"
 	"log"
+	"reflect"
 	"slices"
+	"strings"
 )
 
-type Validator struct {
+type safeGuard struct {
 	Tag      string
 	Validate func(fl validator.FieldLevel) bool
 	Message  string
 }
 
-var DataValidator = Validator{
+const datePattern = "yyyy-MM-dd"
+
+var dataGuard = safeGuard{
 	"data",
 	func(fl validator.FieldLevel) bool {
 		data, ok := fl.Field().Interface().([]*model.RequestOperation)
@@ -30,7 +34,7 @@ var DataValidator = Validator{
 	"не заданы операции",
 }
 
-var SystemIdValidator = Validator{
+var systemIdGuard = safeGuard{
 	"systemId",
 	func(fl validator.FieldLevel) bool {
 		value := fl.Field().String()
@@ -39,7 +43,7 @@ var SystemIdValidator = Validator{
 	"не задан или недопустимое значение идентификатора системы-инициатора",
 }
 
-var OperationValidator = Validator{
+var operationGuard = safeGuard{
 	"operation",
 	func(fl validator.FieldLevel) bool {
 		value := model.OperationType(fl.Field().Int())
@@ -48,7 +52,7 @@ var OperationValidator = Validator{
 	"не задан или неподдерживаемый тип операции",
 }
 
-var StudyValidator = Validator{
+var studyGuard = safeGuard{
 	"study",
 	func(fl validator.FieldLevel) bool {
 		value := model.StudyType(fl.Field().Int())
@@ -56,11 +60,52 @@ var StudyValidator = Validator{
 	},
 	"не задан или неподдерживаемый тип учебной сущности",
 }
-var validators = map[string]*Validator{
-	DataValidator.Tag:      &DataValidator,
-	SystemIdValidator.Tag:  &SystemIdValidator,
-	OperationValidator.Tag: &OperationValidator,
-	StudyValidator.Tag:     &StudyValidator,
+
+var tnGuard = safeGuard{
+	"tn",
+	func(fl validator.FieldLevel) bool {
+		return fl.Field().Uint() > 0
+	},
+	"не задан или неправильный ТН сотрудника",
+}
+
+var uuidGuard = safeGuard{
+	"ruuid",
+	func(fl validator.FieldLevel) bool {
+		return len(strings.Trim(fl.Field().String(), " ")) > 0
+	},
+	"не задан UUID запроса",
+}
+
+var studyIdGuard = safeGuard{
+	"studyId",
+	func(fl validator.FieldLevel) bool {
+		return fl.Field().Uint() > 0
+	},
+	"не задан или неправильный идентификатор учебной сущности",
+}
+
+var dateGuard = safeGuard{
+	"date",
+	func(fl validator.FieldLevel) bool {
+		fs := reflect.Indirect(fl.Parent()).FieldByName("OperationType")
+		if int(fs.Int()) == int(model.Study) && fl.Field().IsZero() {
+			return false
+		}
+		return true
+	},
+	"не задана дата назначения обучения или формат не соответствует паттерну " + datePattern,
+}
+
+var validators = map[string]*safeGuard{
+	dataGuard.Tag:      &dataGuard,
+	systemIdGuard.Tag:  &systemIdGuard,
+	operationGuard.Tag: &operationGuard,
+	studyGuard.Tag:     &studyGuard,
+	tnGuard.Tag:        &tnGuard,
+	studyIdGuard.Tag:   &studyIdGuard,
+	uuidGuard.Tag:      &uuidGuard,
+	dateGuard.Tag:      &dateGuard,
 }
 
 func Bind() {

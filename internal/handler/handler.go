@@ -36,12 +36,18 @@ func study(ctx *gin.Context) {
 	var body model.StudyRequest
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
-		detail := validate.Study(err, ctx.Request.RequestURI)
-		if detail != nil {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, model.BadResponse(ctx, detail))
-		} else {
-			_ = ctx.AbortWithError(http.StatusBadRequest, err)
+		detail := model.ProblemDetail{
+			Type:     "https://wiki.x5.ru/pages/viewpage.action?pageId=1302077850",
+			Instance: ctx.Request.RequestURI,
+			Title:    "Входные параметры не соответствуют требованиям",
 		}
+		errors := validate.Study(err)
+		if errors != nil {
+			detail.Errors = errors
+		} else {
+			detail.Detail = err.Error()
+		}
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, model.BadResponse(ctx, &detail))
 		return
 	}
 
